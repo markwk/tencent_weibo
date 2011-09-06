@@ -1,0 +1,113 @@
+<?php
+// $Id$
+
+/**
+ * Implementation of hook_meu()
+ */
+function tencent_weibo_menu() {
+  $items = array();
+
+  $items['tencent-weibo/callback'] = array(
+    'access callback' => TRUE,
+    'page callback' => 'tencent_weibo_callback',
+    'type' => MENU_CALLBACK,
+    'file' => 'tencent_weibo.pages.inc',
+  );
+  $items['tencent-weibo/login'] = array(
+    'access callback' => TRUE,
+    'page callback' => 'tencent_weibo_login',
+    'type' => MENU_CALLBACK,
+    'file' => 'tencent_weibo.pages.inc',
+  );
+
+
+  $items['user/register/tencent-weibo'] = array(
+    'access callback' => 'user_register_access',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('user_register'),
+    'title' => 'Create Local Account',
+    'type' => MENU_CALLBACK,
+    'file' => 'tencent_weibo.pages.inc',
+  );
+  $items['user/login/tencent-weibo'] = array(
+    'access callback' => 'user_is_anonymous',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('user_login'),
+    'title' => t('Login'),
+    'type' => MENU_CALLBACK,
+    'file' => 'tencent_weibo.pages.inc',
+  );
+
+
+  $items['admin/settings/tencent-weibo'] = array(
+    'title' => 'Weibo setup',
+    'description' => 'Tencent Weibo module settings',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('tencent_weibo_admin_form'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'tencent_weibo.admin.inc'
+  );
+  
+  /*$items['admin/settings/tencent-weibo/default'] = array(
+    'title' => 'Tencent Weibo',
+    'type' => MENU_DEFAULT_LOCAL_TASK
+  );*/
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm()
+ */
+function tencent_weibo_perm() {
+  return array('add qq weibo accounts');
+}
+
+/**
+ * Implementation of hook_cron()
+ *
+ */
+function tencent_weibo_cron() {
+}
+
+/**
+ * Implementation of hook_form_FORM_ID_alter
+ */
+function tencent_weibo_form_user_login_alter(&$form, $form_state) {
+  if(variable_get('sina_weibo_api_key', '') && variable_get('sina_weibo_api_secret', '')) {
+    $form['tencent_weibo_signin'] = array(
+      '#type' => 'markup',
+      '#value' => theme_tencent_weibo_signin()
+    );
+  }
+}
+
+/**
+ * Implementation of hook_form_FORM_ID_alter
+ */
+function tencent_weibo_form_user_register_alter(&$form, $form_state) {
+  if(arg(0) == 'user' && arg(1) == 'register' && arg(2) == 'tencent-weibo') {
+    $form['name']['#default_value'] = $_SESSION['tencent_weibo_token']['screen_name'];
+    $form['#submit'][] = 'tencent_weibo_register_submit';
+  }
+}
+
+function theme_tencent_weibo_signin() {
+  return '<div class="tencent-weibo-signin">' . l(theme('image', drupal_get_path('module', 'tencent_weibo') . '/images/24.png', '', '', array(), FALSE), 'tencent-weibo/login', array('html' => TRUE)) . '</div>';
+}
+
+/**
+ * Implementation of hook_user
+ */
+function tencent_weibo_user($op, &$edit, &$account, $category = NULL) {
+  switch ($op) {
+    case 'load':
+      $tencent_weibo = db_fetch_array(db_query('SELECT * FROM {weibo_tencent_users} WHERE uid = %d', $account->uid));
+      if($tencent_weibo) {
+        $account->tencent_weibo = $tencent_weibo;
+      }
+      break;
+    case 'delete':
+      db_query('DELETE FROM {weibo_tencent_users} WHERE uid=%d', $account->uid);
+      break;
+  }
+}

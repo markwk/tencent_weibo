@@ -1,0 +1,6 @@
+; $Id$
+name = Tencent Weibo
+description = Provide integration functionality with Tencent Weibo
+dependencies[] = oauth_common
+package = Social Networking
+core = 6.x
